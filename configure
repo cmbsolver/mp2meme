@@ -1,0 +1,79 @@
+#!/bin/sh
+
+# Default prefix is user-level bin directory ($HOME/.local or $HOME)
+PREFIX="${HOME}/.local"
+BINDIR=""
+CXX="${CXX:-g++}"
+CXXFLAGS="${CXXFLAGS:--O2 -std=c++17 -Wall}"
+
+print_usage() {
+    cat <<EOF
+Usage: ./configure [OPTIONS]
+
+Configuration options:
+  --prefix=PREFIX         Install files in PREFIX [$PREFIX]
+  --bindir=DIR            User executables in DIR [PREFIX/bin]
+  --cxx=COMPILER          C++ compiler to use [$CXX]
+  --cxxflags=FLAGS        C++ compiler flags [$CXXFLAGS]
+  -h, --help              Display this help and exit
+EOF
+}
+
+for arg in "$@"; do
+    case "$arg" in
+        --prefix=*)
+            PREFIX="${arg#*=}"
+            ;;
+        --bindir=*)
+            BINDIR="${arg#*=}"
+            ;;
+        --cxx=*)
+            CXX="${arg#*=}"
+            ;;
+        --cxxflags=*)
+            CXXFLAGS="${arg#*=}"
+            ;;
+        -h|--help)
+            print_usage
+            exit 0
+            ;;
+        *)
+            echo "Unknown option: $arg" >&2
+            print_usage
+            exit 1
+            ;;
+    esac
+done
+
+if [ -z "$BINDIR" ]; then
+    BINDIR="${PREFIX}/bin"
+fi
+
+echo "Checking for C++ compiler ($CXX)..."
+if ! command -v "$CXX" >/dev/null 2>&1; then
+    echo "Error: C++ compiler '$CXX' not found." >&2
+    exit 1
+fi
+echo "Using C++ compiler: $(command -v "$CXX")"
+
+echo "Checking for ffmpeg..."
+if ! command -v ffmpeg >/dev/null 2>&1; then
+    echo "Warning: ffmpeg not found in PATH. It will be required at runtime." >&2
+else
+    echo "Found ffmpeg: $(command -v ffmpeg)"
+fi
+
+echo "Generating config.mk and Makefile..."
+
+cat <<EOF > config.mk
+PREFIX = $PREFIX
+BINDIR = $BINDIR
+CXX = $CXX
+CXXFLAGS = $CXXFLAGS
+EOF
+
+echo "Configuration complete."
+echo "  Prefix: $PREFIX"
+echo "  Bin dir: $BINDIR"
+echo "  C++ compiler: $CXX"
+echo "Type 'make' to build mp2meme, and 'make install' to install."
